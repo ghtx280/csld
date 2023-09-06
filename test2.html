@@ -172,7 +172,7 @@
     return [prev3, prev2, prev1, active, next];
   }
 
-  function setCenter(force, flat) {
+  function setCenter(force, flat = true) {
     console.log(force, flat);
     mouse = false;
     let offset = len % step;
