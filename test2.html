@@ -80,13 +80,13 @@
   function nav(dir) {
     
   }
+
+  const slider = document.querySelector("#slider")
  
   
   let len = 0;
 
-  if (localStorage.len) {
-    len = +localStorage.len
-  }
+  
 
   let max_index = 0;
   let step = 30;
@@ -98,9 +98,15 @@
   let count = 0;
   let last_len = 0
   let last_force = 0
-  let pair = getPair();
 
-  console.log(len);
+
+  if (localStorage.len) {
+    len = +localStorage.len
+    last_len = len
+  }
+
+
+  // console.log(len);
 
 
   function add() {
@@ -164,16 +170,23 @@
 
   function getPair(elem) {
     let active = elem || document.querySelector(`[data-index="${len}"]`);
+    // console.log(slides.length, "len ch");
     let next   = active?.nextElementSibling;
     let prev1  = active?.previousElementSibling;
     let prev2  = prev1?.previousElementSibling;
     let prev3  = prev2?.previousElementSibling;
 
+    // console.log(active);
+
     return [prev3, prev2, prev1, active, next];
   }
 
+  // let pair = getPair();
+
+  // console.log(document.querySelector(`[data-index="${len}"]`));
+
   function setCenter(force, flat = true) {
-    console.log(force, flat);
+    // console.log(force, flat);
     mouse = false;
     let offset = len % step;
 
@@ -205,6 +218,8 @@
     let active = document.querySelector(`[data-index="${len}"]`);
     active.classList.add("active");
     pair = getPair(active);
+
+    console.log(pair);
     
     if (force == null || !flat) {
       move({ movementY: -1 }, true);
@@ -295,7 +310,7 @@
 
   /*************************************/
 
-  setCenter(null)
+  setCenter(null, false)
 
 
 </script>
