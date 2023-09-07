@@ -63,6 +63,7 @@
   <span> - </span>
   <button onclick="setCenter(-6, is_anim)">next</button>
   <button onclick="setCenter(6 , is_anim)">prev</button>
+  <button onclick="console.log(sld.val());">bgb</button>
   <input type="checkbox" onchange="is_anim = !is_anim">
 
   <div class="fff" id="slider">
@@ -74,244 +75,252 @@
   </div>
 
   <script>
+    const slider = document.querySelector("#slider")
+
+    
+
+ 
+
+
+  // class MakeSlider {
+  //   let fdfd = 123
+  // }
+
+  
+  function initSlider(slider = document.querySelector("#slider"), params = {}) {
+    let len = 0;
+
+    let max_len = 0;
+    let step = 30;
+    let mouse = false;
+    let can_move = true;
+    let transition_time = 200;
+    let previous_touch;
+    let slides = slider.children;
+    let count = 0;
+    let last_len = 0
+    let last_force = 0
+
+    new MutationObserver(e => {
+      count = slides.length - 1
+      max_len = count * step
+
+      for (const elem of slides) {
+        if (!elem.dataset.index) {
+          setupSlide(elem)
+        }
+      }
+
+      setCenter(null)
+    })
+    .observe(slider, {childList: true})
+
+
+    if (localStorage.len) {
+      len = +localStorage.len
+      last_len = len
+    }
+
+    /*************************************/
+
+    slider.style = `--time: ${transition_time}ms`;
+
+    for (const slide of slides) {
+      max_len = count * step;
+      setupSlide(slide)
+      count++;
+    }
+
+    /*************************************/
+
+    function setupSlide(slide) {
+      slide.dataset.index = max_len;
+      slide.dataset.angle = count % 2 ? -2 : 2
+      slide.style.transform = `translate3d(0,1000px,0)`;
+      slide.style.filter = "opacity(0)";
+    }
+
+    function throttle(func, timeout = 50) {
+      let last = 0;
+
+      return function(...args) {
+        const now = Date.now();
+        if (now - last > timeout) func(...args) 
+        last = now;
+      }
+    }
+
+    function getPair(elem) {
+      let active = elem || document.querySelector(`[data-index="${len}"]`);
+      let next   = active?.nextElementSibling;
+      let prev1  = active?.previousElementSibling;
+      let prev2  = prev1?.previousElementSibling;
+      let prev3  = prev2?.previousElementSibling;
+
+      return [prev3, prev2, prev1, active, next];
+    }
+
+    function setCenter(force, flat = true) {
+      mouse = false;
+      let offset = len % step;
+
+      if (offset > step / 2) {
+        len = len + (step - offset);
+      } else {
+        len = len - offset;
+      }
+
+      if (Math.abs(force) > 5) {
+        len = force < 0 ? len + step : len - step
+      }
+
+      len = len <= max_len ? len : max_len;
+      len = len >= 0 ? len : 0;
+
+      if (len > last_len + step) {
+        len = last_len + step;
+      }
+
+      if (len < last_len - step) {
+        len = last_len - step;
+      }
+
+      len = Math.round(len)
+      last_len = len
+
+      document.querySelector(".active")?.classList.remove("active");
+      let active = document.querySelector(`[data-index="${len}"]`);
+      active?.classList.add("active");
+      pair = getPair(active);
+      
+      if (force == null || !flat) {
+        move({ movementY: -1 }, true);
+        return
+      }
+      
+      slider?.classList.add("trans");
+      move({ movementY: -1 }, true);
+      can_move = false;
+      setTimeout(
+        () => {
+          slider.classList?.remove("trans");
+          can_move = true;
+        },
+        transition_time
+      );
+
+      params?.onchange(len)
+    }
+
+    function round(num, fix = 10) {
+      return Math.round(num * fix) / fix
+    }
+
+    function move(e, once) {
+      if (mouse || once) {
+        let divisor = 40
+
+        last_force = e.movementY
+        
+        len -= e.movementY / (innerHeight / (len < 0 || len > max_len ? divisor / 8 : divisor));
+
+        for (const slide of pair) {
+          if (!slide) continue;
+          let loc_pos = round(len - slide.dataset.index)
+          let angle = +slide.dataset.angle;
+          let pos;
+          let scl;
+          let rot;
+          let opc;
+
+          if (loc_pos > 0) {
+            pos = (-loc_pos);
+            scl = (-loc_pos * 2)
+            rot = (loc_pos * angle) / 40
+            opc = 1 - round(loc_pos / step) / 3
+          } else {
+            pos = -loc_pos * 20;
+            scl = 1;
+            rot = 0;
+            opc = 1 - -loc_pos / 30;
+          }
+
+          slide.style.transform = `perspective(500px)
+          translate3d(0, ${pos * 1.2}px, ${scl}px)
+          rotateZ(${rot}deg)`;
+
+          slide.style.filter = `opacity(${opc})`;
+        }
+      }
+    }
+
+    /*************************************/
+
+    slider.addEventListener("touchstart", () => {
+      if (can_move) mouse = true;
+    });
+
+    slider.addEventListener("touchend", () => {
+      previous_touch = null;
+      setCenter(last_force);
+    });
+
+    /*************************************/
+
+    slider.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+
+      if (previous_touch) {
+        move({ movementY: touch.pageY - previous_touch.pageY });
+      }
+
+      previous_touch = touch;
+    });
+
+    slider.addEventListener("wheel", throttle((e) => {
+      if (can_move) setCenter(e.deltaY > 0 ? -6 : 6);
+    }))
+
+    /*************************************/
+
+    setCenter(null, false)
+
+    return {
+      val:() => len,
+      count: () => count,
+    }
+  }
+
+  let sld = initSlider(slider, {
+    onchange(len) {
+      console.log(len);
+    }
+  })
 
   let is_anim = true
 
-  function nav(dir) {
-    
-  }
-
-  const slider = document.querySelector("#slider")
- 
-  
-  let len = 0;
-
-  
-
-  let max_index = 0;
-  let step = 30;
-  let mouse = false;
-  let can_move = true;
-  let transition_time = 200;
-  let previousTouch;
-  let slides = slider.children;
-  let count = 0;
-  let last_len = 0
-  let last_force = 0
-
-
-  if (localStorage.len) {
-    len = +localStorage.len
-    last_len = len
-  }
-
-
-  // console.log(len);
-
-
   function add() {
-    slider.innerHTML += `<div><p>${count + 1}</p></div>`
-
-    max_index = count * step;
-
-    let last = slider.children
-    last = last[last.length - 1]
-    last.dataset.index = max_index;
-    last.dataset.angle = count % 2 ? -2 : 2
-    last.style.transform = `translate3d(0,1000px,0)`;
-    last.style.filter = "opacity(0)";
-
-    count++;
-    setCenter(null)
+    slider.innerHTML += `<div><p>${sld.count() + 2}</p></div>`
   }
 
   function del() {
-    max_index -= step;
+    // max_len -= step;
 
     let last = slider.children
     last = last[last.length - 1]
     last.remove()
 
-    count--;
+    // count--;
 
-    setCenter(null)
+    // setCenter(null)
   }
 
   function save() {
     localStorage.len = len
   }
 
-  /*************************************/
-
-  slider.style = `--time: ${transition_time}ms`;
-
-  for (const slide of slides) {
-    max_index = count * step;
-
-    slide.dataset.index = max_index;
-    slide.dataset.angle = count % 2 ? -3 : 3
-    slide.style.transform = `translate3d(0,1000px,0)`;
-    slide.style.filter = "opacity(0)";
-
-    count++;
-  }
-
-  /*************************************/
-
-  function throttle(func, timeout = 50) {
-    let last = 0;
-
-    return function(...args) {
-      const now = Date.now();
-      if (now - last > timeout) func(...args) 
-      last = now;
-    }
-  }
-
-  function getPair(elem) {
-    let active = elem || document.querySelector(`[data-index="${len}"]`);
-    // console.log(slides.length, "len ch");
-    let next   = active?.nextElementSibling;
-    let prev1  = active?.previousElementSibling;
-    let prev2  = prev1?.previousElementSibling;
-    let prev3  = prev2?.previousElementSibling;
-
-    // console.log(active);
-
-    return [prev3, prev2, prev1, active, next];
-  }
-
-  // let pair = getPair();
-
-  // console.log(document.querySelector(`[data-index="${len}"]`));
-
-  function setCenter(force, flat = true) {
-    // console.log(force, flat);
-    mouse = false;
-    let offset = len % step;
-
-    if (offset > step / 2) {
-      len = len + (step - offset);
-    } else {
-      len = len - offset;
-    }
-
-    if (Math.abs(force) > 5) {
-      len = force < 0 ? len + step : len - step
-    }
-
-    len = len <= max_index ? len : max_index;
-    len = len >= 0 ? len : 0;
-
-    if (len > last_len + step) {
-      len = last_len + step;
-    }
-
-    if (len < last_len - step) {
-      len = last_len - step;
-    }
-
-    len = Math.round(len)
-    last_len = len
-
-    document.querySelector(".active")?.classList.remove("active");
-    let active = document.querySelector(`[data-index="${len}"]`);
-    active.classList.add("active");
-    pair = getPair(active);
-
-    console.log(pair);
-    
-    if (force == null || !flat) {
-      move({ movementY: -1 }, true);
-      return
-    }
-    
-    slider.classList.add("trans");
-    move({ movementY: -1 }, true);
-    can_move = false;
-    setTimeout(
-      () => {
-        slider.classList.remove("trans");
-        can_move = true;
-      },
-      transition_time
-    );
-  }
-
-  function move(e, once) {
-    if (mouse || once) {
-      let divisor = 40
-
-      last_force = e.movementY
-      
-      len -= e.movementY / (innerHeight / (len < 0 || len > max_index ? divisor / 8 : divisor));
-
-      for (const slide of pair) {
-        if (!slide) continue;
-        let loc_pos = +(len - slide.dataset.index).toFixed(1);
-        let angle = +slide.dataset.angle;
-        let pos;
-        let scl;
-        let rot;
-        let opc;
-
-        // if (slide.classList.contains("active")) {
-        //   console.log((1 - loc_pos / step ) * 1.33);
-        // }
-
-        if (loc_pos > 0) {
-          pos = -loc_pos;
-          scl = -loc_pos * 2
-          rot = (loc_pos * angle) / 40
-          opc = 1 - loc_pos / step / 3
-        } else {
-          pos = -loc_pos * 20;
-          scl = 1;
-          rot = 0;
-          opc = 1 - -loc_pos / 30;
-        }
-
-        slide.style.transform = `perspective(500px)
-        translate3d(0, ${pos * 1.2}px, ${scl}px)
-        rotateZ(${rot}deg)`;
-
-        slide.style.filter = `opacity(${opc})`;
-      }
-    }
-  }
-
-  /*************************************/
-
-  slider.addEventListener("touchstart", () => {
-    if (can_move) mouse = true;
-  });
-
-  slider.addEventListener("touchend", () => {
-    previousTouch = null;
-    setCenter(last_force);
-  });
-
-  /*************************************/
-
-  slider.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-
-    if (previousTouch) {
-      move({ movementY: touch.pageY - previousTouch.pageY });
-    }
-
-    previousTouch = touch;
-  });
-
-  slider.addEventListener("wheel", throttle((e) => {
-    if (can_move) setCenter(e.deltaY > 0 ? -6 : 6);
-  }))
-
-  /*************************************/
-
-  setCenter(null, false)
-
+  console.log(sld);
 
 </script>
 </body>
