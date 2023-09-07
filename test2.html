@@ -61,9 +61,9 @@
   <button onclick="del()">del</button>
   <button onclick="save()">save</button>
   <span> - </span>
-  <button onclick="setCenter(-6, is_anim)">next</button>
-  <button onclick="setCenter(6 , is_anim)">prev</button>
-  <button onclick="console.log(sld.val());">bgb</button>
+  <button onclick="sld.next(is_anim)">next</button>
+  <button onclick="sld.prev(is_anim)">prev</button>
+  <button onclick="console.log(sld.len());">log val</button>
   <input type="checkbox" onchange="is_anim = !is_anim">
 
   <div class="fff" id="slider">
@@ -88,18 +88,18 @@
 
   
   function initSlider(slider = document.querySelector("#slider"), params = {}) {
-    let len = 0;
+    let len  = params.len || 0;
+    let last_len = params.len || 0;
+    let step = params.step || 30;
+    let duration = params.duration || 200;
 
-    let max_len = 0;
-    let step = 30;
     let mouse = false;
-    let can_move = true;
-    let transition_time = 200;
-    let previous_touch;
-    let slides = slider.children;
     let count = 0;
-    let last_len = 0
+    let slides = slider.children;
+    let max_len = 0;
+    let can_move = true;
     let last_force = 0
+    let previous_touch;
 
     new MutationObserver(e => {
       count = slides.length - 1
@@ -123,7 +123,7 @@
 
     /*************************************/
 
-    slider.style = `--time: ${transition_time}ms`;
+    slider.style = `--time: ${duration}ms`;
 
     for (const slide of slides) {
       max_len = count * step;
@@ -160,7 +160,7 @@
       return [prev3, prev2, prev1, active, next];
     }
 
-    function setCenter(force, flat = true) {
+    function setCenter(force, anim = true) {
       mouse = false;
       let offset = len % step;
 
@@ -188,25 +188,25 @@
       len = Math.round(len)
       last_len = len
 
-      document.querySelector(".active")?.classList.remove("active");
+      // document.querySelector(".active")?.classList.remove("active");
       let active = document.querySelector(`[data-index="${len}"]`);
-      active?.classList.add("active");
+      // active?.classList.add("active");
       pair = getPair(active);
       
-      if (force == null || !flat) {
-        move({ movementY: -1 }, true);
+      if (force == null || (!anim || !duration)) {
+        move({ movementY: 0 }, true);
         return
       }
       
       slider?.classList.add("trans");
-      move({ movementY: -1 }, true);
+      move({ movementY: 0 }, true);
       can_move = false;
       setTimeout(
         () => {
           slider.classList?.remove("trans");
           can_move = true;
         },
-        transition_time
+        duration
       );
 
       params?.onchange(len)
@@ -234,9 +234,9 @@
           let opc;
 
           if (loc_pos > 0) {
-            pos = (-loc_pos);
-            scl = (-loc_pos * 2)
-            rot = (loc_pos * angle) / 40
+            pos = -loc_pos * 1.3;
+            scl = -loc_pos * 2
+            rot = loc_pos * angle / 40
             opc = 1 - round(loc_pos / step) / 3
           } else {
             pos = -loc_pos * 20;
@@ -246,7 +246,7 @@
           }
 
           slide.style.transform = `perspective(500px)
-          translate3d(0, ${pos * 1.2}px, ${scl}px)
+          translate3d(0, ${pos}px, ${scl}px)
           rotateZ(${rot}deg)`;
 
           slide.style.filter = `opacity(${opc})`;
@@ -287,40 +287,36 @@
     setCenter(null, false)
 
     return {
-      val:() => len,
-      count: () => count,
+      len:   ( num  ) => num ? len = num : len,
+      count: (      ) => count,
+      next:  ( anim ) => setCenter(-6, anim),
+      prev:  ( anim ) => setCenter(6,  anim),
     }
   }
 
   let sld = initSlider(slider, {
     onchange(len) {
-      console.log(len);
+      console.log(sld.len());
     }
   })
 
   let is_anim = true
 
   function add() {
-    slider.innerHTML += `<div><p>${sld.count() + 2}</p></div>`
+    slider.innerHTML += `<div><p>${slider.children.length + 1}</p></div>`
   }
 
   function del() {
-    // max_len -= step;
-
-    let last = slider.children
-    last = last[last.length - 1]
-    last.remove()
-
-    // count--;
-
-    // setCenter(null)
+    slider.children[slider.children.length - 1].remove()
   }
 
   function save() {
-    localStorage.len = len
+    localStorage.len = sld.len()
   }
 
-  console.log(sld);
+
+
+
 
 </script>
 </body>
